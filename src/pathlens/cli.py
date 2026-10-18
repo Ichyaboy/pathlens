@@ -8,6 +8,10 @@ from rich.console import Console
 app = typer.Typer(help="Explain synthetic Active Directory attack paths.")
 console = Console()
 
+@app.callback()
+def main() -> None:
+    """Explain synthetic Active Directory attack paths."""
+
 class Node(BaseModel):
     id: str
     type: str
@@ -47,7 +51,7 @@ def analyze(
     try:
         data = GraphData.model_validate(json.loads(input.read_text(encoding="utf-8")))
     except (ValueError, OSError) as exc:
-        console.print(f"[red]Invalid input:[/red] {exc}")
+        console.print(f"Invalid input: {exc}", style="red", markup=False)
         raise typer.Exit(2)
     graph = nx.MultiDiGraph()
     for node in data.nodes:
@@ -66,8 +70,8 @@ def analyze(
     for i, (start, end) in enumerate(zip(path, path[1:]), 1):
         edge = next(iter(graph[start][end].values()))
         relation = edge["relation"]
-        console.print(f"[{i}] {start} -> {end} ({relation})")
-        console.print(f"    {EXPLANATIONS.get(relation, 'Unsupported relationship; no security conclusion available.')}")
+        console.print(f"[{i}] {start} -> {end} ({relation})", markup=False)
+        console.print(f"    {EXPLANATIONS.get(relation, 'Unsupported relationship; no security conclusion available.')}", markup=False)
     console.print("[yellow]A graph path is not proof of exploitability.[/yellow]")
 
 if __name__ == "__main__":
