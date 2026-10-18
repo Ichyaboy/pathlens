@@ -1,0 +1,13 @@
+{
+  "nodes": [
+    {"id": "ICHYABOY", "type": "User"},
+    {"id": "HELPDESK", "type": "Group"},
+    {"id": "IT-ADMINS", "type": "Group"},
+    {"id": "DOMAIN ADMINS", "type": "Group"}
+  ],
+  "edges": [
+    {"source": "ICHYABOY", "target": "HELPDESK", "relation": "MemberOf"},
+    {"source": "HELPDESK", "target": "IT-ADMINS", "relation": "GenericAll"},
+    {"source": "IT-ADMINS", "target": "DOMAIN ADMINS", "relation": "MemberOf"}
+  ]
+}
