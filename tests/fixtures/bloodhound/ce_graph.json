@@ -1,0 +1,65 @@
+{
+  "nodes": {
+    "101": {
+      "label": "ALICE@SYNTHETIC.EXAMPLE",
+      "kind": "User",
+      "kinds": ["Base", "User"],
+      "objectId": "synthetic-user",
+      "isTierZero": false,
+      "isOwnedObject": false,
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "properties": {"fixture": true, "evidence": null}
+    },
+    "205": {
+      "label": "ADMINS@SYNTHETIC.EXAMPLE",
+      "kind": "Group",
+      "kinds": ["Base", "Group"],
+      "objectId": "synthetic-group",
+      "isTierZero": false,
+      "isOwnedObject": false,
+      "lastSeen": "2026-01-01T00:00:00Z"
+    },
+    "999": {
+      "label": "ISOLATED@SYNTHETIC.EXAMPLE",
+      "kind": "FutureObject",
+      "objectId": "",
+      "properties": {"provenance": {"fixture": "synthetic"}}
+    }
+  },
+  "edges": [
+    {
+      "id": "301",
+      "source": "101",
+      "target": "205",
+      "kind": "MemberOf",
+      "label": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "properties": {"fixture": true}
+    },
+    {
+      "id": "302",
+      "source": "101",
+      "target": "205",
+      "kind": "FutureRelationship",
+      "label": "FutureRelationship",
+      "properties": {"evidence": {"validated": true}, "provenance": null}
+    },
+    {
+      "id": "301",
+      "source": "101",
+      "target": "205",
+      "kind": "MemberOf",
+      "label": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "properties": {"fixture": true}
+    },
+    {
+      "id": "303",
+      "source": "205",
+      "target": "205",
+      "kind": "FutureRelationship",
+      "label": "FutureRelationship"
+    }
+  ],
+  "literals": []
+}

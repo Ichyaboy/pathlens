@@ -6,9 +6,45 @@ from rich.console import Console
 from pathlens.graph import (
     GraphData, analyze_graph, build_graph,
 )
+from pathlens.importers.bloodhound import (
+    ImportValidationError, read_ce_graph, serialize_graph, write_new_file,
+)
 
 app = typer.Typer(help="Explain synthetic Active Directory relationship paths.")
 console = Console()
+import_app = typer.Typer(help="Normalize supported offline graph exports.")
+app.add_typer(import_app, name="import")
+
+
+@import_app.command("bloodhound")
+def import_bloodhound(
+    input: Path = typer.Option(..., "--input"),
+    format: str = typer.Option("ce-graph", "--format"),
+    output: Path | None = typer.Option(None, "--output"),
+) -> None:
+    """Import a CE graph-view JSON export; no directory access or exploitation."""
+    if format != "ce-graph":
+        typer.echo("Unsupported format; expected ce-graph.", err=True)
+        raise typer.Exit(2)
+    try:
+        result = read_ce_graph(input)
+        content = serialize_graph(result.data)
+        if output is None:
+            typer.echo(content, nl=False)
+        else:
+            write_new_file(output, content)
+    except ImportValidationError as exc:
+        typer.echo(f"Invalid import: {exc}", err=True)
+        raise typer.Exit(2)
+    except OSError as exc:
+        typer.echo(f"Import I/O error: {exc}", err=True)
+        raise typer.Exit(1)
+    for diagnostic in result.diagnostics:
+        typer.echo(diagnostic, err=True)
+    typer.echo(
+        f"Imported {len(result.data.nodes)} nodes and {len(result.data.edges)} relationships.",
+        err=True,
+    )
 
 @app.callback()
 def main() -> None:
