@@ -2,45 +2,17 @@ from pathlib import Path
 import json
 import networkx as nx
 import typer
-from pydantic import BaseModel, model_validator
 from rich.console import Console
+from pathlens.graph import (
+    GraphData, analyze_graph, build_graph,
+)
 
-app = typer.Typer(help="Explain synthetic Active Directory attack paths.")
+app = typer.Typer(help="Explain synthetic Active Directory relationship paths.")
 console = Console()
 
 @app.callback()
 def main() -> None:
-    """Explain synthetic Active Directory attack paths."""
-
-class Node(BaseModel):
-    id: str
-    type: str
-
-class Edge(BaseModel):
-    source: str
-    target: str
-    relation: str
-
-class GraphData(BaseModel):
-    nodes: list[Node]
-    edges: list[Edge]
-
-    @model_validator(mode="after")
-    def check_references(self):
-        ids = [n.id for n in self.nodes]
-        if len(ids) != len(set(ids)):
-            raise ValueError("Duplicate node IDs")
-        for edge in self.edges:
-            if edge.source not in ids or edge.target not in ids:
-                raise ValueError(f"Unknown node referenced by edge: {edge}")
-        return self
-
-EXPLANATIONS = {
-    "MemberOf": "Group membership relationship; privileges depend on the group's effective rights.",
-    "GenericAll": "Broad control over the target object; practical abuse requires validation.",
-    "GenericWrite": "Write permissions on the target object; impact depends on writable attributes.",
-    "AddMember": "Potential ability to modify membership of the target group.",
-}
+    """Explain synthetic Active Directory relationship paths."""
 
 @app.command()
 def analyze(
@@ -53,25 +25,38 @@ def analyze(
     except (ValueError, OSError) as exc:
         console.print(f"Invalid input: {exc}", style="red", markup=False)
         raise typer.Exit(2)
-    graph = nx.MultiDiGraph()
-    for node in data.nodes:
-        graph.add_node(node.id, type=node.type)
-    for edge in data.edges:
-        graph.add_edge(edge.source, edge.target, relation=edge.relation)
-    if source not in graph or target not in graph:
+    graph = build_graph(data)
+    try:
+        result = analyze_graph(graph, source, target)
+    except nx.NodeNotFound:
         console.print("[red]Unknown source or target.[/red]")
         raise typer.Exit(2)
-    try:
-        path = nx.shortest_path(graph, source, target)
     except nx.NetworkXNoPath:
         console.print("No directed path found.")
         raise typer.Exit(1)
-    console.print(f"[bold]PathLens v0.1[/bold] — {len(path)-1} relationships")
-    for i, (start, end) in enumerate(zip(path, path[1:]), 1):
-        edge = next(iter(graph[start][end].values()))
-        relation = edge["relation"]
-        console.print(f"[{i}] {start} -> {end} ({relation})", markup=False)
-        console.print(f"    {EXPLANATIONS.get(relation, 'Unsupported relationship; no security conclusion available.')}", markup=False)
+    count = sum(len(hop) for hop in result.relationships)
+    console.print(f"[bold]PathLens v0.1[/bold] — {count} relationships")
+    for i, relationships in enumerate(result.relationships, 1):
+        for report in relationships:
+            edge = report.edge
+            console.print(
+                f"[{i}] {edge.source} -> {edge.target} ({edge.relation})",
+                markup=False,
+            )
+            console.print(f"    {report.explanation}", markup=False)
+            if not report.recognized:
+                console.print("    Semantics: unknown.", markup=False)
+            for implication in report.potential_implications:
+                console.print(f"    Potential implication: {implication}", markup=False)
+            for warning in report.warnings:
+                console.print(f"    Warning: {warning}", markup=False)
+            if report.semantics:
+                for prerequisite in report.semantics.prerequisites:
+                    console.print(f"    Requires validation: {prerequisite}", markup=False)
+                for limitation in report.semantics.limitations:
+                    console.print(f"    Limitation: {limitation}", markup=False)
+                console.print(f"    Remediation: {report.semantics.remediation}", markup=False)
+    console.print("Exploitability: not assessed.")
     console.print("[yellow]A graph path is not proof of exploitability.[/yellow]")
 
 if __name__ == "__main__":
