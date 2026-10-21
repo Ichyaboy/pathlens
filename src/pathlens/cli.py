@@ -9,6 +9,7 @@ from pathlens.graph import (
 from pathlens.importers.bloodhound import (
     ImportValidationError, read_ce_graph, serialize_graph, write_new_file,
 )
+from pathlens.reporting import build_report, render_json, render_markdown
 
 app = typer.Typer(help="Explain synthetic Active Directory relationship paths.")
 console = Console()
@@ -55,21 +56,42 @@ def analyze(
     input: Path = typer.Option(..., "--input", exists=True, readable=True),
     source: str = typer.Option(..., "--source"),
     target: str = typer.Option(..., "--target"),
+    format: str = typer.Option("terminal", "--format"),
+    output: Path | None = typer.Option(None, "--output"),
 ):
+    if format not in {"terminal", "json", "markdown"}:
+        typer.echo("Unsupported format; expected terminal, json, or markdown.", err=True)
+        raise typer.Exit(2)
+    if output is not None and format == "terminal":
+        typer.echo("--output requires --format json or --format markdown.", err=True)
+        raise typer.Exit(2)
+    error_console = console if format == "terminal" else Console(stderr=True)
     try:
         data = GraphData.model_validate(json.loads(input.read_text(encoding="utf-8")))
     except (ValueError, OSError) as exc:
-        console.print(f"Invalid input: {exc}", style="red", markup=False)
+        error_console.print(f"Invalid input: {exc}", style="red", markup=False)
         raise typer.Exit(2)
     graph = build_graph(data)
     try:
         result = analyze_graph(graph, source, target)
     except nx.NodeNotFound:
-        console.print("[red]Unknown source or target.[/red]")
+        error_console.print("[red]Unknown source or target.[/red]")
         raise typer.Exit(2)
     except nx.NetworkXNoPath:
-        console.print("No directed path found.")
+        error_console.print("No directed path found.")
         raise typer.Exit(1)
+    if format != "terminal":
+        report = build_report(result)
+        content = render_json(report) if format == "json" else render_markdown(report)
+        try:
+            if output is None:
+                typer.echo(content, nl=False)
+            else:
+                write_new_file(output, content)
+        except OSError as exc:
+            typer.echo(f"Report I/O error: {exc}", err=True)
+            raise typer.Exit(1)
+        return
     count = sum(len(hop) for hop in result.relationships)
     console.print(f"[bold]PathLens v0.1[/bold] — {count} relationships")
     for i, relationships in enumerate(result.relationships, 1):
