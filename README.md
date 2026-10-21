@@ -85,12 +85,13 @@ and verifies each in a separate environment. Permissions are `contents: read`;
 checkout credentials are not persisted. Only GitHub's checkout and Python setup
 actions are used, pinned to commit IDs. There is no publishing job or release token.
 
-No license has been selected or added. Before public distribution, the owner must
-choose a license and supply its text. Then add the corresponding SPDX expression
-as `project.license` and `project.license-files = ["LICENSE"]` (or the actual chosen
-license filenames). Do not add a speculative license classifier. A successful
-hosted CI run and authorized real BloodHound export validation remain release
-validation requirements.
+A successful hosted CI run and authorized real BloodHound export validation
+remain release validation requirements.
+
+## License
+
+PathLens is licensed under the [Apache License, Version 2.0](LICENSE)
+(`Apache-2.0`).
 
 ## Graph analysis
 

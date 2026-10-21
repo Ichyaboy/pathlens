@@ -1,4 +1,4 @@
-include README.md pyproject.toml uv.lock
+include README.md LICENSE pyproject.toml uv.lock
 include data/sample_domain.json
 recursive-include tests *.py *.json
 recursive-include scripts *.py
