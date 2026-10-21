@@ -15,7 +15,7 @@ from pathlens.relationships import (
 
 
 class MetadataModel(BaseModel):
-    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False, strict=True, hide_input_in_errors=True)
 
     evidence: JsonValue = None
     provenance: JsonValue = None
@@ -43,7 +43,7 @@ class GraphData(MetadataModel):
             raise ValueError("Duplicate node IDs")
         for edge in self.edges:
             if edge.source not in ids or edge.target not in ids:
-                raise ValueError(f"Unknown node referenced by edge: {edge}")
+                raise ValueError("Unknown node referenced by edge")
         return self
 
 

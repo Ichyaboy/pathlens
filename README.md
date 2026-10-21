@@ -111,6 +111,21 @@ never relationship recognition, compatibility, or implications.
 
 The CLI prints descriptions, conditional implications, guidance, and warnings
 using literal text, without printing metadata. Syntax and exit codes are unchanged.
+Terminal text escapes ASCII/C1 controls, ANSI escape introducers, Unicode format
+and bidi controls, surrogates, and line separators. Original strings remain
+unchanged in structured data. Validation errors report structural field paths
+and categories rather than rejected values, metadata keys, or complete records.
+I/O errors report their exception category and errno without echoing filenames.
+
+Native analysis and CE import share a strict, bounded UTF-8 JSON decoder.
+Duplicate keys at every depth, non-finite numbers (including overflow), and
+malformed or excessively nested JSON are rejected with exit code `2`.
+Schema fields are type-checked without coercion. Native input defaults to
+**64 MiB, 72 nested containers, 50,000 nodes, and 100,000 edges**; CE input
+retains the smaller limits below. The native allowance accommodates imported
+provenance and escaped Unicode. Python callers can use `read_native_graph` or
+`parse_native_graph` from `pathlens.native` with an `InputLimits` instance.
+Direct construction of `GraphData` does not apply file byte or record limits.
 
 The layer does not evaluate ACLs, deny entries, inheritance, group scope, tokens,
 attribute restrictions, or evidence authenticity. Preconditions are guidance to
@@ -229,6 +244,8 @@ not coerced. Optional string fields may be empty. Missing optional fields stay
 missing; explicit null is allowed in opaque metadata, but not in typed optional
 fields. `lastSeen` is retained as a string without timestamp interpretation.
 Extra record fields are retained with a diagnostic, not silently dropped.
+Node-specific optional fields are validated only on nodes; fields with the same
+names on edges are retained as opaque extensions.
 
 Node keys become `bhce:<original-key>`. Edge endpoints resolve exclusively against
 those keys. `objectId` and display names never merge identities. IDs are local to
@@ -275,6 +292,10 @@ guarantee of a particular peak memory usage. Python callers may supply an
 `ImportLimits` instance; the CLI uses fixed defaults.
 
 All validation and serialization finish before stdout or file publication.
+Normalized output must also fit the native byte, depth, and record limits;
+otherwise import fails with exit code `2` before publishing anything. Thus every
+successful CLI normalization is within the default native reader's limits,
+even when provenance or ASCII escaping expands the original export.
 File output uses a private temporary file in the destination directory,
 flush/fsync, and atomic hard-link creation. It never replaces existing paths,
 including symlinks, even if another writer creates the destination concurrently.

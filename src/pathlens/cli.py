@@ -1,10 +1,13 @@
 from pathlib import Path
-import json
 import networkx as nx
 import typer
 from rich.console import Console
+from pydantic import ValidationError
+from pathlens.native import read_native_graph, validation_summary
+from pathlens.json_input import InputValidationError
+from pathlens.terminal import terminal_text
 from pathlens.graph import (
-    GraphData, analyze_graph, build_graph,
+    analyze_graph, build_graph,
 )
 from pathlens.importers.bloodhound import (
     ImportValidationError, read_ce_graph, serialize_graph, write_new_file,
@@ -35,13 +38,19 @@ def import_bloodhound(
         else:
             write_new_file(output, content)
     except ImportValidationError as exc:
-        typer.echo(f"Invalid import: {exc}", err=True)
+        typer.echo(terminal_text(f"Invalid import: {exc}"), err=True)
+        raise typer.Exit(2)
+    except ValidationError as exc:
+        typer.echo(terminal_text(f"Invalid import: {validation_summary(exc)}"), err=True)
+        raise typer.Exit(2)
+    except RecursionError:
+        typer.echo("Invalid import: nesting exceeds supported depth.", err=True)
         raise typer.Exit(2)
     except OSError as exc:
-        typer.echo(f"Import I/O error: {exc}", err=True)
+        typer.echo(f"Import I/O error: {type(exc).__name__} (errno {exc.errno})", err=True)
         raise typer.Exit(1)
     for diagnostic in result.diagnostics:
-        typer.echo(diagnostic, err=True)
+        typer.echo(terminal_text(diagnostic), err=True)
     typer.echo(
         f"Imported {len(result.data.nodes)} nodes and {len(result.data.edges)} relationships.",
         err=True,
@@ -53,12 +62,12 @@ def main() -> None:
 
 @app.command()
 def analyze(
-    input: Path = typer.Option(..., "--input", exists=True, readable=True),
+    input: Path = typer.Option(..., "--input"),
     source: str = typer.Option(..., "--source"),
     target: str = typer.Option(..., "--target"),
     format: str = typer.Option("terminal", "--format"),
     output: Path | None = typer.Option(None, "--output"),
-):
+) -> None:
     if format not in {"terminal", "json", "markdown"}:
         typer.echo("Unsupported format; expected terminal, json, or markdown.", err=True)
         raise typer.Exit(2)
@@ -67,9 +76,12 @@ def analyze(
         raise typer.Exit(2)
     error_console = console if format == "terminal" else Console(stderr=True)
     try:
-        data = GraphData.model_validate(json.loads(input.read_text(encoding="utf-8")))
-    except (ValueError, OSError) as exc:
-        error_console.print(f"Invalid input: {exc}", style="red", markup=False)
+        data = read_native_graph(input)
+    except InputValidationError as exc:
+        error_console.print(terminal_text(f"Invalid input: {exc}"), style="red", markup=False)
+        raise typer.Exit(2)
+    except OSError as exc:
+        error_console.print(f"Invalid input: {type(exc).__name__} (errno {exc.errno})", style="red", markup=False)
         raise typer.Exit(2)
     graph = build_graph(data)
     try:
@@ -89,7 +101,7 @@ def analyze(
             else:
                 write_new_file(output, content)
         except OSError as exc:
-            typer.echo(f"Report I/O error: {exc}", err=True)
+            typer.echo(f"Report I/O error: {type(exc).__name__} (errno {exc.errno})", err=True)
             raise typer.Exit(1)
         return
     count = sum(len(hop) for hop in result.relationships)
@@ -98,22 +110,22 @@ def analyze(
         for report in relationships:
             edge = report.edge
             console.print(
-                f"[{i}] {edge.source} -> {edge.target} ({edge.relation})",
+                terminal_text(f"[{i}] {edge.source} -> {edge.target} ({edge.relation})"),
                 markup=False,
             )
-            console.print(f"    {report.explanation}", markup=False)
+            console.print(terminal_text(f"    {report.explanation}"), markup=False)
             if not report.recognized:
                 console.print("    Semantics: unknown.", markup=False)
             for implication in report.potential_implications:
-                console.print(f"    Potential implication: {implication}", markup=False)
+                console.print(terminal_text(f"    Potential implication: {implication}"), markup=False)
             for warning in report.warnings:
-                console.print(f"    Warning: {warning}", markup=False)
+                console.print(terminal_text(f"    Warning: {warning}"), markup=False)
             if report.semantics:
                 for prerequisite in report.semantics.prerequisites:
-                    console.print(f"    Requires validation: {prerequisite}", markup=False)
+                    console.print(terminal_text(f"    Requires validation: {prerequisite}"), markup=False)
                 for limitation in report.semantics.limitations:
-                    console.print(f"    Limitation: {limitation}", markup=False)
-                console.print(f"    Remediation: {report.semantics.remediation}", markup=False)
+                    console.print(terminal_text(f"    Limitation: {limitation}"), markup=False)
+                console.print(terminal_text(f"    Remediation: {report.semantics.remediation}"), markup=False)
     console.print("Exploitability: not assessed.")
     console.print("[yellow]A graph path is not proof of exploitability.[/yellow]")
 

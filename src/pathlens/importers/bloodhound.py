@@ -2,83 +2,32 @@
 
 from dataclasses import dataclass
 import hashlib
+from io import StringIO
 import json
-import math
 import os
 from pathlib import Path
 import tempfile
-from typing import NoReturn
 
 from pydantic import JsonValue
 
 from pathlens.graph import Edge, GraphData, Node
+from pathlens.json_input import (
+    InputLimits as ImportLimits, InputValidationError as ImportValidationError,
+    NATIVE_LIMITS, check_counts, check_depth, parse_json, read_bytes,
+)
 from pathlens.relationships import endpoint_warnings, lookup_relationship
 
 UPSTREAM_REVISION = "41421cc5e28370e1feab7e454a032ba808c7cce1"
 KNOWN_NODE_TYPES = {"User", "Group", "Computer", "OU", "Domain", "GPO", "Container"}
 
 
-@dataclass(frozen=True)
-class ImportLimits:
-    max_bytes: int = 16 * 1024 * 1024
-    max_depth: int = 64
-    max_nodes: int = 50_000
-    max_edges: int = 100_000
-
-
 DEFAULT_LIMITS = ImportLimits()
-
-
-class ImportValidationError(ValueError):
-    """Invalid or unsupported source document; no output should be published."""
 
 
 @dataclass(frozen=True)
 class ImportResult:
     data: GraphData
     diagnostics: tuple[str, ...]
-
-
-def _reject_constant(value: str) -> NoReturn:
-    raise ImportValidationError(f"Non-finite JSON number: {value}")
-
-
-def _finite_float(value: str) -> float:
-    result = float(value)
-    if not math.isfinite(result):
-        _reject_constant(value)
-    return result
-
-
-def _unique_object(pairs: list[tuple[str, JsonValue]]) -> dict[str, JsonValue]:
-    result: dict[str, JsonValue] = {}
-    for key, value in pairs:
-        if key in result:
-            raise ImportValidationError("Duplicate JSON object key")
-        result[key] = value
-    return result
-
-
-def _check_depth(text: str, maximum: int) -> None:
-    """Bound containers before recursive JSON decoding, respecting escaped strings."""
-    depth = 0
-    quoted = escaped = False
-    for char in text:
-        if quoted:
-            if escaped:
-                escaped = False
-            elif char == "\\":
-                escaped = True
-            elif char == '"':
-                quoted = False
-        elif char == '"':
-            quoted = True
-        elif char in "[{":
-            depth += 1
-            if depth > maximum:
-                raise ImportValidationError(f"JSON nesting exceeds {maximum} levels")
-        elif char in "]}":
-            depth -= 1
 
 
 def _object(value: JsonValue, location: str) -> dict[str, JsonValue]:
@@ -101,16 +50,16 @@ def _pointer(key: str) -> str:
     return key.replace("~", "~0").replace("/", "~1")
 
 
-def _optional_fields(record: dict[str, JsonValue], location: str) -> None:
-    for field in ("label", "objectId", "lastSeen"):
+def _optional_fields(record: dict[str, JsonValue], location: str, *, node: bool) -> None:
+    for field in (("label", "objectId", "lastSeen") if node else ("label", "lastSeen")):
         if field in record and not isinstance(record[field], str):
             raise ImportValidationError(f"{location}/{field}: expected a string")
-    for field in ("isTierZero", "isOwnedObject", "hidden"):
+    for field in (("isTierZero", "isOwnedObject", "hidden") if node else ()):
         if field in record and not isinstance(record[field], bool):
             raise ImportValidationError(f"{location}/{field}: expected a boolean")
     if "properties" in record:
         _object(record["properties"], f"{location}/properties")
-    if "kinds" in record:
+    if node and "kinds" in record:
         kinds = record["kinds"]
         if not isinstance(kinds, list) or any(not isinstance(kind, str) for kind in kinds):
             raise ImportValidationError(f"{location}/kinds: expected an array of strings")
@@ -122,19 +71,7 @@ def _canonical(value: JsonValue) -> str:
 
 def parse_ce_graph(raw: bytes, limits: ImportLimits = DEFAULT_LIMITS) -> ImportResult:
     """Normalize one document, without network access or security inference."""
-    if len(raw) > limits.max_bytes:
-        raise ImportValidationError(f"Input exceeds {limits.max_bytes} bytes")
-    try:
-        text = raw.decode("utf-8")
-        _check_depth(text, limits.max_depth)
-        document = json.loads(
-            text, object_pairs_hook=_unique_object,
-            parse_constant=_reject_constant, parse_float=_finite_float,
-        )
-    except ImportValidationError:
-        raise
-    except (UnicodeError, ValueError, RecursionError) as exc:
-        raise ImportValidationError("Invalid UTF-8 JSON document") from exc
+    document = parse_json(raw, limits)
     root = _object(document, "/")
     if "data" in root and "meta" in root:
         raise ImportValidationError("Unsupported collector JSON (data/meta); expected a CE graph-view export")
@@ -146,10 +83,7 @@ def parse_ce_graph(raw: bytes, limits: ImportLimits = DEFAULT_LIMITS) -> ImportR
     edges = root.get("edges")
     if not isinstance(edges, list):
         raise ImportValidationError("/edges: expected an array")
-    if len(nodes) > limits.max_nodes:
-        raise ImportValidationError(f"Node count exceeds {limits.max_nodes}")
-    if len(edges) > limits.max_edges:
-        raise ImportValidationError(f"Edge count exceeds {limits.max_edges}")
+    check_counts(len(nodes), len(edges), limits)
 
     diagnostics = {"Scope: exported graph only; exploitability not assessed."}
     normalized_nodes: list[Node] = []
@@ -165,7 +99,7 @@ def parse_ce_graph(raw: bytes, limits: ImportLimits = DEFAULT_LIMITS) -> ImportR
         _identifier(key, location)
         record = _object(value, location)
         kind = _identifier(record.get("kind"), f"{location}/kind")
-        _optional_fields(record, location)
+        _optional_fields(record, location, node=True)
         node_types[key] = kind
         if kind not in KNOWN_NODE_TYPES:
             diagnostics.add(f"Unknown node type {kind!r} retained.")
@@ -184,7 +118,7 @@ def parse_ce_graph(raw: bytes, limits: ImportLimits = DEFAULT_LIMITS) -> ImportR
         target = _identifier(record.get("target"), f"{location}/target")
         kind = _identifier(record.get("kind"), f"{location}/kind")
         edge_id = _identifier(record.get("id"), f"{location}/id")
-        _optional_fields(record, location)
+        _optional_fields(record, location, node=False)
         for field, endpoint in (("source", source), ("target", target)):
             if endpoint not in nodes:
                 raise ImportValidationError(f"{location}/{field}: dangling node reference")
@@ -224,16 +158,27 @@ def parse_ce_graph(raw: bytes, limits: ImportLimits = DEFAULT_LIMITS) -> ImportR
 
 
 def read_ce_graph(path: Path, limits: ImportLimits = DEFAULT_LIMITS) -> ImportResult:
-    with path.open("rb") as stream:
-        raw = stream.read(limits.max_bytes + 1)
-    return parse_ce_graph(raw, limits)
+    return parse_ce_graph(read_bytes(path, limits), limits)
 
 
 def serialize_graph(data: GraphData) -> str:
-    return json.dumps(
-        data.model_dump(exclude_unset=True), sort_keys=True,
+    # Bound accumulated output too: indentation can greatly expand nested metadata.
+    check_counts(len(data.nodes), len(data.edges), NATIVE_LIMITS)
+    encoder = json.JSONEncoder(sort_keys=True,
         ensure_ascii=True, allow_nan=False, indent=2,
-    ) + "\n"
+    )
+    with StringIO() as stream:
+        length = 1  # final newline; ensure_ascii makes chars == bytes
+        for chunk in encoder.iterencode(data.model_dump(exclude_unset=True)):
+            length += len(chunk)
+            if length > NATIVE_LIMITS.max_bytes:
+                raise ImportValidationError("Normalized output exceeds native input byte limit")
+            stream.write(chunk)
+        stream.write("\n")
+        content = stream.getvalue()
+    # Never publish normalization that the default native reader cannot accept.
+    check_depth(content, NATIVE_LIMITS.max_depth)
+    return content
 
 
 def write_new_file(path: Path, content: str) -> None:

@@ -93,7 +93,8 @@ def test_validation_error_is_literal(tmp_path: Path):
     result = analyze(input_path, "A", "B")
 
     assert result.exit_code == 2
-    assert "[bold]MISSING[/bold]" in result.output
+    assert "[bold]MISSING[/bold]" not in result.output
+    assert "value_error" in result.output
 
 
 def test_parallel_and_reordered_cli_output(tmp_path: Path):
