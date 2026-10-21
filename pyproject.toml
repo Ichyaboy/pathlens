@@ -1,15 +1,31 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools==84.2.0"]
 build-backend = "setuptools.build_meta"
+
 [project]
 name = "pathlens"
 version = "0.1.0"
 description = "Deterministic AD attack-path explanation prototype"
-requires-python = ">=3.11"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Information Technology",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+]
 dependencies = ["networkx>=3.2", "typer>=0.12", "rich>=13", "pydantic>=2"]
+
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+
 [project.scripts]
 pathlens = "pathlens.cli:app"
+
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["pathlens", "pathlens.*"]
+namespaces = false
