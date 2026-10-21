@@ -26,6 +26,10 @@ def check_contents(wheel: Path, sdist: Path) -> None:
         assert metadata["Name"] == "pathlens" and metadata["Version"] == "0.1.0"
         assert metadata["Requires-Python"] == "<3.13,>=3.11"
         assert metadata["Description-Content-Type"] == "text/markdown"
+        assert metadata["License-Expression"] == "Apache-2.0"
+        assert metadata.get_all("License-File") == ["LICENSE"]
+        assert not any(value.startswith("License ::") for value in metadata.get_all("Classifier", []))
+        assert archive.read("pathlens-0.1.0.dist-info/licenses/LICENSE") == (ROOT / "LICENSE").read_bytes()
         assert "# PathLens" in metadata.get_payload()
         assert "pathlens = pathlens.cli:app" in archive.read(
             "pathlens-0.1.0.dist-info/entry_points.txt").decode()
@@ -33,12 +37,18 @@ def check_contents(wheel: Path, sdist: Path) -> None:
             assert source.relative_to(ROOT / "src").as_posix() in names
     with tarfile.open(sdist) as archive:
         names = set(archive.getnames())
-        for relative in ["README.md", "pyproject.toml", "uv.lock", "data/sample_domain.json",
+        for relative in ["README.md", "LICENSE", "pyproject.toml", "uv.lock", "data/sample_domain.json",
                          "tests/fixtures/bloodhound/ce_graph.json", "scripts/package_smoke.py",
                          "scripts/verify_artifacts.py"]:
             assert f"pathlens-0.1.0/{relative}" in names
         for test in (ROOT / "tests").glob("test_*.py"):
             assert f"pathlens-0.1.0/tests/{test.name}" in names
+        with archive.extractfile("pathlens-0.1.0/LICENSE") as license_file:
+            assert license_file.read() == (ROOT / "LICENSE").read_bytes()
+        with archive.extractfile("pathlens-0.1.0/PKG-INFO") as info:
+            metadata = BytesParser().parsebytes(info.read())
+        assert metadata["License-Expression"] == "Apache-2.0"
+        assert metadata.get_all("License-File") == ["LICENSE"]
     print("Artifact contents and metadata verified", flush=True)
 
 
