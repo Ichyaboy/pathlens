@@ -42,7 +42,17 @@ def main() -> None:
         run("import", "bloodhound", "--input", str(fixtures / "tests/fixtures/bloodhound/ce_graph.json"),
             "--output", str(normalized))
         imported = ("analyze", "--input", str(normalized), "--source", "bhce:101", "--target", "bhce:205")
-        for number, command in enumerate([native, imported]):
+        explore_normalized = work / "explore-normalized.json"
+        result = run("import", "bloodhound", "--input",
+                     str(fixtures / "tests/fixtures/bloodhound/ce_explore_graph.json"),
+                     "--output", str(explore_normalized))
+        assert "Imported 9 nodes and 23 relationships." in result.stderr
+        explore_data = json.loads(explore_normalized.read_text())
+        assert len(explore_data["nodes"]) == 9 and len(explore_data["edges"]) == 23
+        explore = ("analyze", "--input", str(explore_normalized),
+                   "--source", "bhce:1", "--target", "bhce:2")
+        assert "3 relationships" in run(*explore).stdout
+        for number, command in enumerate([native, imported, explore]):
             report = json.loads(run(*command, "--format", "json").stdout)
             assert report["relationship_count"] == 3
             assert report["exploitability"] == "not_assessed"

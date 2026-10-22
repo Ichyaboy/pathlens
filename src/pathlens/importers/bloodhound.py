@@ -91,7 +91,8 @@ def parse_ce_graph(raw: bytes, limits: ImportLimits = DEFAULT_LIMITS) -> ImportR
     node_types: dict[str, str] = {}
     node_fields = {"kind", "kinds", "label", "objectId", "lastSeen", "properties",
                    "isTierZero", "isOwnedObject", "hidden"}
-    edge_fields = {"id", "kind", "label", "source", "target", "lastSeen", "properties"}
+    edge_fields = {"id", "exploreGraphId", "data", "kind", "label", "source", "target",
+                   "lastSeen", "properties"}
     if root.keys() - {"nodes", "edges", "literals", "node_keys", "edge_keys"}:
         diagnostics.add("Additional graph fields retained without interpretation.")
     for key, value in sorted(nodes.items()):
@@ -110,24 +111,27 @@ def parse_ce_graph(raw: bytes, limits: ImportLimits = DEFAULT_LIMITS) -> ImportR
             provenance={"bloodhound": {"source_location": location, "record": record}},
         ))
 
-    seen_ids: dict[str, str] = {}
+    seen_ids: set[str] = set()
     for index, value in enumerate(edges):
         location = f"/edges/{index}"
         record = _object(value, location)
         source = _identifier(record.get("source"), f"{location}/source")
         target = _identifier(record.get("target"), f"{location}/target")
         kind = _identifier(record.get("kind"), f"{location}/kind")
-        edge_id = _identifier(record.get("id"), f"{location}/id")
+        # Both spellings identify an export-local relationship, never a global ID.
+        id_field = "exploreGraphId" if "exploreGraphId" in record else "id"
+        edge_id = _identifier(record.get(id_field), f"{location}/{id_field}")
+        if "exploreGraphId" in record and "id" in record:
+            legacy_id = _identifier(record["id"], f"{location}/id")
+            if legacy_id != edge_id:
+                raise ImportValidationError(f"{location}: conflicting id and exploreGraphId")
         _optional_fields(record, location, node=False)
         for field, endpoint in (("source", source), ("target", target)):
             if endpoint not in nodes:
                 raise ImportValidationError(f"{location}/{field}: dangling node reference")
-        canonical = _canonical(record)
         if edge_id in seen_ids:
-            if seen_ids[edge_id] != canonical:
-                raise ImportValidationError(f"{location}/id: conflicting records share an edge ID")
-            diagnostics.add("Identical repeated edge records retained separately.")
-        seen_ids[edge_id] = canonical
+            raise ImportValidationError(f"{location}/{id_field}: duplicate edge ID")
+        seen_ids.add(edge_id)
         if "label" in record and record["label"] != kind:
             diagnostics.add("Edge label differs from kind; kind used, both retained.")
         if record.keys() - edge_fields:
@@ -138,7 +142,11 @@ def parse_ce_graph(raw: bytes, limits: ImportLimits = DEFAULT_LIMITS) -> ImportR
         diagnostics.update(endpoint_warnings(semantics, node_types[target]))
         normalized_edges.append(Edge(
             source=f"bhce:{source}", target=f"bhce:{target}", relation=kind,
-            provenance={"bloodhound": {"source_location": location, "record": record}},
+            provenance={"bloodhound": {
+                "source_location": location, "record": record,
+                "edge_id": edge_id, "edge_id_field": id_field,
+                "identity_scope": "export_local",
+            }},
         ))
     normalized_edges.sort(key=lambda edge: (
         edge.source, edge.target, edge.relation, _canonical(edge.provenance),

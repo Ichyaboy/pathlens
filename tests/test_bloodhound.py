@@ -146,7 +146,7 @@ def test_dangling_references_and_conflicting_edge_ids():
         parse_ce_graph(encoded(document))
     document = minimal()
     document["edges"].append({**document["edges"][0], "kind": "WriteDacl"})
-    with pytest.raises(ImportValidationError, match="conflicting"):
+    with pytest.raises(ImportValidationError, match="duplicate"):
         parse_ce_graph(encoded(document))
 
 
@@ -299,3 +299,145 @@ def test_empty_graph_and_escaped_pointer():
     data = parse_ce_graph(encoded({"nodes": {"a/b~c": {"kind": "User"}}, "edges": []})).data
     assert data.nodes[0].id == "bhce:a/b~c"
     assert data.nodes[0].provenance["bloodhound"]["source_location"] == "/nodes/a~1b~0c"
+
+
+EXPLORE_FIXTURE = FIXTURE.with_name("ce_explore_graph.json")
+
+
+def explore_minimal():
+    document = minimal()
+    document["edges"][0]["exploreGraphId"] = document["edges"][0].pop("id")
+    return document
+
+
+def test_explore_fixture_identity_metadata_and_round_trip():
+    from pathlens.native import parse_native_graph
+    from pathlens.reporting import build_report, render_json
+
+    raw = EXPLORE_FIXTURE.read_bytes()
+    original = json.loads(raw)
+    result = parse_ce_graph(raw)
+    assert result == parse_ce_graph(raw)
+    assert (len(result.data.nodes), len(result.data.edges)) == (9, 23)
+    assert parse_native_graph(serialize_graph(result.data).encode()) == result.data
+    graph = build_graph(result.data)
+    assert graph.number_of_nodes() == 9 and graph.number_of_edges() == 23
+    assert graph.number_of_edges("bhce:1", "bhce:2") == 3
+    with pytest.raises(nx.NetworkXNoPath):
+        shortest_node_path(graph, "bhce:2", "bhce:1")
+    for node in result.data.nodes:
+        assert node.provenance["bloodhound"]["record"] == original["nodes"][node.id[5:]]
+    ids = set()
+    for edge in result.data.edges:
+        provenance = edge.provenance["bloodhound"]
+        record = original["edges"][int(provenance["source_location"].split("/")[-1])]
+        assert provenance["record"] == record
+        assert provenance["edge_id"] == record["exploreGraphId"]
+        assert provenance["edge_id_field"] == "exploreGraphId"
+        assert provenance["identity_scope"] == "export_local"
+        assert (edge.source, edge.target, edge.relation) == (
+            "bhce:" + record["source"], "bhce:" + record["target"], record["kind"])
+        assert "evidence" not in edge.model_dump(exclude_unset=True)
+        ids.add(provenance["edge_id"])
+    assert len(ids) == 23 and "rel_1183" in ids
+    report = json.loads(render_json(build_report(analyze_graph(graph, "bhce:1", "bhce:2"))))
+    assert report["relationship_count"] == 3
+    assert report["exploitability"] == "not_assessed"
+    assert report["independently_validated_findings"] == []
+    assert {r["assertion"]["provenance"]["bloodhound"]["edge_id"]
+            for r in report["hops"][0]["relationships"]} == {"rel_1183", "rel_1184", "rel_1185"}
+
+
+@pytest.mark.parametrize("value", ["", " ", " a", "a ", "a\nb", "\x00", "\x7f", "\ud800", 1, True, None, [], {}])
+def test_invalid_explore_ids(value):
+    document = explore_minimal()
+    document["edges"][0]["exploreGraphId"] = value
+    with pytest.raises(ImportValidationError, match="/edges/0/exploreGraphId"):
+        parse_ce_graph(encoded(document))
+
+
+@pytest.mark.parametrize("field", ["source", "target", "exploreGraphId"])
+def test_missing_explore_fields(field):
+    document = explore_minimal()
+    del document["edges"][0][field]
+    with pytest.raises(ImportValidationError):
+        parse_ce_graph(encoded(document))
+
+
+@pytest.mark.parametrize("field", ["source", "target"])
+def test_explore_dangling_endpoints(field):
+    document = explore_minimal()
+    document["edges"][0][field] = "absent"
+    with pytest.raises(ImportValidationError, match=f"/edges/0/{field}: dangling"):
+        parse_ce_graph(encoded(document))
+
+
+@pytest.mark.parametrize("factory", [minimal, explore_minimal])
+@pytest.mark.parametrize("change", [{}, {"kind": "WriteDacl"}, {"source": "b", "target": "a"}])
+def test_all_duplicate_ids_rejected(factory, change):
+    document = factory()
+    document["edges"].append({**document["edges"][0], **change})
+    with pytest.raises(ImportValidationError, match="duplicate edge ID"):
+        parse_ce_graph(encoded(document))
+
+
+def test_id_aliases_are_validated_without_fallback_or_cross_namespace_collision():
+    document = explore_minimal()
+    edge = document["edges"][0]
+    edge["id"] = "e"
+    assert parse_ce_graph(encoded(document)).data.edges[0].provenance["bloodhound"]["edge_id"] == "e"
+    for value in [None, "", 1, "different"]:
+        edge["id"] = value
+        with pytest.raises(ImportValidationError):
+            parse_ce_graph(encoded(document))
+    edge.pop("id")
+    document["edges"].append(minimal()["edges"][0])
+    with pytest.raises(ImportValidationError, match="duplicate edge ID"):
+        parse_ce_graph(encoded(document))
+
+
+@pytest.mark.parametrize("value", [None, [], {}, "opaque", {"id": None, "exploreGraphId": "unrelated"}])
+def test_explore_data_is_opaque(value):
+    document = explore_minimal()
+    document["edges"][0]["data"] = value
+    result = parse_ce_graph(encoded(document))
+    assert result.data.edges[0].provenance["bloodhound"]["record"]["data"] == value
+
+
+def test_explore_duplicate_keys_rejected():
+    for raw in [
+        b'{"nodes":{"a":{"kind":"User"},"a":{"kind":"User"}},"edges":[]}',
+        b'{"nodes":{},"edges":[{"exploreGraphId":"a","exploreGraphId":"b"}]}',
+        b'{"nodes":{},"edges":[{"data":{"x":1,"x":2}}]}',
+    ]:
+        with pytest.raises(ImportValidationError, match="Duplicate JSON object key"):
+            parse_ce_graph(raw)
+
+
+def test_explore_duplicate_failure_does_not_publish(tmp_path):
+    document = explore_minimal()
+    document["edges"] *= 2
+    source, output = tmp_path / "input.json", tmp_path / "output.json"
+    source.write_bytes(encoded(document))
+    for args in [(), ("--output", str(output))]:
+        result = invoke_import(source, *args)
+        assert result.exit_code == 2 and result.stdout == ""
+        assert not output.exists()
+    assert not list(tmp_path.glob(".pathlens-*"))
+
+
+@pytest.mark.parametrize("format", ["terminal", "json", "markdown"])
+def test_explore_import_analyze_report(tmp_path, format):
+    output = tmp_path / "normalized.json"
+    result = invoke_import(EXPLORE_FIXTURE, "--output", str(output))
+    assert result.exit_code == 0, result.output
+    assert "Imported 9 nodes and 23 relationships." in result.stderr
+    result = runner.invoke(app, ["analyze", "--input", str(output), "--source", "bhce:1",
+                                 "--target", "bhce:2", "--format", format])
+    assert result.exit_code == 0, result.output
+    if format == "json":
+        assert json.loads(result.stdout)["relationship_count"] == 3
+    elif format == "markdown":
+        assert "rel_1183" in result.stdout
+    else:
+        assert "3 relationships" in result.stdout

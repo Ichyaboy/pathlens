@@ -274,7 +274,9 @@ metadata in full; they do not redact or authenticate it.
 Omit `--output` to write normalized JSON to stdout. Diagnostics and the import
 summary go to stderr. `--format` defaults to `ce-graph`; no other format is
 supported. The importer runs entirely offline and adds no dependencies.
-The checked-in fixture is synthetic, not an organizational export.
+The checked-in fixtures are synthetic, not organizational exports.
+`ce_explore_graph.json` models the reported Explore shape with 9 nodes and
+23 edges; the actual real export has not been validated here.
 
 ### Verified export boundary
 
@@ -305,7 +307,7 @@ Verification used source inspection, not a live browser capture.
 | --- | --- | --- |
 | Root | `nodes`: object keyed by graph-local IDs; `edges`: array | Other root fields are retained opaquely, including `literals`, `node_keys`, `edge_keys` |
 | Node | `kind`: nonempty string | `label`, `objectId`, `lastSeen`: strings; `kinds`: string array; `properties`: object; `isTierZero`, `isOwnedObject`, `hidden`: booleans |
-| Edge | `id`, `source`, `target`, `kind`: nonempty strings | `label`, `lastSeen`: strings; `properties`: object |
+| Edge | `exploreGraphId` (or legacy `id`), `source`, `target`, `kind`: nonempty strings | `label`, `lastSeen`: strings; `properties`: object; `data`: opaque JSON |
 
 Node keys and required edge fields reject surrounding whitespace, ASCII control
 characters, DEL, and unpaired surrogate characters. Numeric or Boolean IDs are
@@ -322,9 +324,17 @@ one export; cross-file merging is unsupported. Node `kind` becomes `type`, and
 edge `kind` becomes `relation`, with no spelling normalization or inference from
 labels. Differing edge labels produce a warning and remain preserved.
 
-Every edge record survives, including exact duplicates, parallel edges, and
-self-loops. Isolated nodes remain present. Conflicting records sharing one edge
-ID are rejected; identical repeats are retained with a warning. Unknown node and
+Every accepted edge record survives, including parallel edges with distinct IDs
+and self-loops. Isolated nodes remain present. All duplicate edge IDs are rejected,
+even for identical records (a deliberate tightening of the previous contract).
+Explore `exploreGraphId` values such as `rel_1183` use the same string validation
+as legacy `id`; no prefix pattern or cross-export stability is assumed. If both
+fields appear, both must be valid and equal. Uniqueness is checked across the
+entire export, including mixed ID spellings and different endpoint pairs.
+The selected `edge_id`, `edge_id_field`, and `identity_scope: export_local` are
+retained in edge provenance; NetworkX keys remain internal multigraph keys.
+Edge `data` is retained without imposing an undocumented internal schema or
+interpreting its contents as evidence of exploitability. Unknown node and
 relationship kinds are retained with diagnostics. Existing semantics apply
 only as conditional descriptions, not validated directory facts.
 

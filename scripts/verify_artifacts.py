@@ -38,7 +38,8 @@ def check_contents(wheel: Path, sdist: Path) -> None:
     with tarfile.open(sdist) as archive:
         names = set(archive.getnames())
         for relative in ["README.md", "LICENSE", "pyproject.toml", "uv.lock", "data/sample_domain.json",
-                         "tests/fixtures/bloodhound/ce_graph.json", "scripts/package_smoke.py",
+                         "tests/fixtures/bloodhound/ce_graph.json",
+                         "tests/fixtures/bloodhound/ce_explore_graph.json", "scripts/package_smoke.py",
                          "scripts/verify_artifacts.py"]:
             assert f"pathlens-0.1.0/{relative}" in names
         for test in (ROOT / "tests").glob("test_*.py"):

@@ -1,0 +1,551 @@
+{
+  "nodes": {
+    "1": {
+      "label": "OBJECT-1@SYNTHETIC.EXAMPLE",
+      "kind": "Group",
+      "kinds": [
+        "Base",
+        "Group"
+      ],
+      "objectId": "synthetic-1",
+      "isTierZero": false,
+      "isOwnedObject": true,
+      "lastSeen": "2026-01-01T00:00:00Z"
+    },
+    "2": {
+      "label": "OBJECT-2@SYNTHETIC.EXAMPLE",
+      "kind": "Group",
+      "kinds": [
+        "Base",
+        "Group"
+      ],
+      "objectId": "synthetic-2",
+      "isTierZero": false,
+      "isOwnedObject": false,
+      "lastSeen": "2026-01-01T00:00:00Z"
+    },
+    "3": {
+      "label": "OBJECT-3@SYNTHETIC.EXAMPLE",
+      "kind": "Group",
+      "kinds": [
+        "Base",
+        "Group"
+      ],
+      "objectId": "synthetic-3",
+      "isTierZero": false,
+      "isOwnedObject": false,
+      "lastSeen": "2026-01-01T00:00:00Z"
+    },
+    "4": {
+      "label": "OBJECT-4@SYNTHETIC.EXAMPLE",
+      "kind": "Group",
+      "kinds": [
+        "Base",
+        "Group"
+      ],
+      "objectId": "synthetic-4",
+      "isTierZero": false,
+      "isOwnedObject": false,
+      "lastSeen": "2026-01-01T00:00:00Z"
+    },
+    "5": {
+      "label": "OBJECT-5@SYNTHETIC.EXAMPLE",
+      "kind": "Group",
+      "kinds": [
+        "Base",
+        "Group"
+      ],
+      "objectId": "synthetic-5",
+      "isTierZero": false,
+      "isOwnedObject": false,
+      "lastSeen": "2026-01-01T00:00:00Z"
+    },
+    "6": {
+      "label": "OBJECT-6@SYNTHETIC.EXAMPLE",
+      "kind": "Group",
+      "kinds": [
+        "Base",
+        "Group"
+      ],
+      "objectId": "synthetic-6",
+      "isTierZero": false,
+      "isOwnedObject": false,
+      "lastSeen": "2026-01-01T00:00:00Z"
+    },
+    "7": {
+      "label": "OBJECT-7@SYNTHETIC.EXAMPLE",
+      "kind": "Group",
+      "kinds": [
+        "Base",
+        "Group"
+      ],
+      "objectId": "synthetic-7",
+      "isTierZero": false,
+      "isOwnedObject": false,
+      "lastSeen": "2026-01-01T00:00:00Z"
+    },
+    "8": {
+      "label": "OBJECT-8@SYNTHETIC.EXAMPLE",
+      "kind": "Group",
+      "kinds": [
+        "Base",
+        "Group"
+      ],
+      "objectId": "synthetic-8",
+      "isTierZero": false,
+      "isOwnedObject": false,
+      "lastSeen": "2026-01-01T00:00:00Z"
+    },
+    "9": {
+      "label": "OBJECT-9@SYNTHETIC.EXAMPLE",
+      "kind": "Group",
+      "kinds": [
+        "Base",
+        "Group"
+      ],
+      "objectId": "synthetic-9",
+      "isTierZero": true,
+      "isOwnedObject": false,
+      "lastSeen": "2026-01-01T00:00:00Z"
+    }
+  },
+  "edges": [
+    {
+      "source": "1",
+      "target": "2",
+      "label": "MemberOf",
+      "kind": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1183",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "1",
+      "target": "2",
+      "label": "MemberOf",
+      "kind": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1184",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "1",
+      "target": "2",
+      "label": "FutureRelationship",
+      "kind": "FutureRelationship",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1185",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "2",
+      "target": "3",
+      "label": "MemberOf",
+      "kind": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1186",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "3",
+      "target": "4",
+      "label": "MemberOf",
+      "kind": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1187",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "4",
+      "target": "5",
+      "label": "FutureRelationship",
+      "kind": "FutureRelationship",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1188",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "5",
+      "target": "6",
+      "label": "MemberOf",
+      "kind": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1189",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "6",
+      "target": "7",
+      "label": "MemberOf",
+      "kind": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1190",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "7",
+      "target": "8",
+      "label": "FutureRelationship",
+      "kind": "FutureRelationship",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1191",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "8",
+      "target": "9",
+      "label": "MemberOf",
+      "kind": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1192",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "2",
+      "target": "3",
+      "label": "MemberOf",
+      "kind": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1193",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "3",
+      "target": "4",
+      "label": "FutureRelationship",
+      "kind": "FutureRelationship",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1194",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "4",
+      "target": "5",
+      "label": "MemberOf",
+      "kind": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1195",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "5",
+      "target": "6",
+      "label": "MemberOf",
+      "kind": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1196",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "6",
+      "target": "7",
+      "label": "FutureRelationship",
+      "kind": "FutureRelationship",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1197",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "7",
+      "target": "8",
+      "label": "MemberOf",
+      "kind": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1198",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "8",
+      "target": "9",
+      "label": "MemberOf",
+      "kind": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1199",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "2",
+      "target": "3",
+      "label": "FutureRelationship",
+      "kind": "FutureRelationship",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1200",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "3",
+      "target": "4",
+      "label": "MemberOf",
+      "kind": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1201",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "4",
+      "target": "5",
+      "label": "MemberOf",
+      "kind": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1202",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "5",
+      "target": "6",
+      "label": "FutureRelationship",
+      "kind": "FutureRelationship",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1203",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "6",
+      "target": "7",
+      "label": "MemberOf",
+      "kind": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1204",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    },
+    {
+      "source": "7",
+      "target": "8",
+      "label": "MemberOf",
+      "kind": "MemberOf",
+      "lastSeen": "2026-01-01T00:00:00Z",
+      "exploreGraphId": "rel_1205",
+      "data": {
+        "fixture": "synthetic",
+        "evidence": {
+          "exploitable": true
+        },
+        "nested": [
+          null,
+          false,
+          0
+        ]
+      }
+    }
+  ]
+}
